@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,13 +8,13 @@ version = "1.0.0"
 description = "Text normalization for voice agents - turn LLM output into text a TTS engine speaks correctly."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Divyajeet" }]
 keywords = ["tts", "text-to-speech", "voice-agent", "normalization", "livekit", "speech", "nlp"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Topic :: Text Processing :: Linguistic",
