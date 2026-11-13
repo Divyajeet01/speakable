@@ -19,7 +19,8 @@ CASES = [
      "Summary\nfirst item\nfive kilograms total"),
     ("Meeting on Nov 11, 2026.",
      "Meeting on November eleventh, twenty twenty-six."),
-    ("Acme Inc. vs. Beta Ltd.", "Acme Incorporated versus Beta Limited"),
+    # "Ltd." ends the sentence, so its full stop has to survive the expansion.
+    ("Acme Inc. vs. Beta Ltd.", "Acme Incorporated versus Beta Limited."),
     ("Call +1 555-123-4567 today",
      "Call plus one five five five one two three four five six seven today"),
     ("It costs $1 exactly.", "It costs one dollar exactly."),
@@ -43,6 +44,23 @@ CASES = [
     ("Add 3/4 cup", "Add three quarters cup"),
     ("Mix 5/16 parts", "Mix five over sixteen parts"),
     ("Issue # filed", "Issue filed"),
+    # A sentence-ending abbreviation keeps its full stop, or TTS runs the two
+    # sentences together.
+    ("We are at 42 Oak St. Co-pay is due.",
+     "We are at forty-two Oak Street. Co-pay is due."),
+    ("Mail it to the Sales Dept. Thanks.",
+     "Mail it to the Sales Department. Thanks."),
+    ("Visit 9 Elm Rd.", "Visit nine Elm Road."),
+    # ...but one that introduces a name never does, even before a capital.
+    ("Call Dr. Rao now.", "Call Doctor Rao now."),
+    # A lowercase word after it means mid-sentence, so no full stop is kept.
+    ("Acme Corp. vs. Beta Inc. won",
+     "Acme Corporation versus Beta Incorporated won"),
+    # A unit still expands when the quantity is a fraction.
+    ("Add 3/4 kg of flour", "Add three quarters kilograms of flour"),
+    ("Use 1/2 mb of cache", "Use one half megabytes of cache"),
+    # A non-unit word after a fraction is left alone.
+    ("Add 3/4 cup", "Add three quarters cup"),
     ("", ""),
 ]
 

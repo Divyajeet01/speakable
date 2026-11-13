@@ -24,6 +24,12 @@ Save fifteen percent!
 
 Pure Python, zero dependencies in the core, ~1.5 ms for a typical utterance.
 
+## Try it without installing anything
+
+**https://divyajeet01.github.io/speakable/** - paste your own text and watch it
+get fixed. The whole library is compiled into the page, so nothing you paste
+leaves your browser.
+
 ## What it handles
 
 | Input | Output |
@@ -130,6 +136,25 @@ touches a dot. Currency has to run before plain integers.
 
 Non-English locales, Indian digit grouping (lakh/crore), roman numerals, and
 mathematical expressions. PRs welcome.
+
+## Changelog
+
+### 1.1.0
+
+- **Sentence-ending abbreviations keep their full stop.** `"42 Oak St. Co-pay
+  is due."` now reads as `"forty-two Oak Street. Co-pay is due."` instead of
+  running the two sentences together. Abbreviations that introduce a name
+  (`Dr.`, `Mr.`, `Prof.`) or join clauses (`vs.`) still always absorb the stop,
+  so `"Call Dr. Rao"` is unchanged.
+- **Units after a fraction expand.** `"3/4 kg"` now reads as `"three quarters
+  kilograms"`. A following word that is not a unit is left alone, so
+  `"3/4 cup"` is still `"three quarters cup"`.
+- Added a browser build of the engine under `docs/`, diffed against the Python
+  library on every test case.
+
+### 1.0.0
+
+Initial release.
 
 ## License
 

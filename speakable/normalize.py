@@ -25,6 +25,12 @@ ABBREVIATIONS = {
     "Corp": "Corporation", "Ltd": "Limited", "Dept": "Department",
     "approx": "approximately", "vs": "versus", "etc": "et cetera",
 }
+# Abbreviations that sit *before* a name ("Dr. Rao") or join two clauses
+# ("Acme vs. Beta") can never be the last word of a sentence, so their full stop
+# always belongs to the abbreviation. Every other one sits *after* its noun
+# ("42 Oak St.") and so can end a sentence - there the full stop has to survive,
+# or TTS runs the two sentences together.
+_NEVER_ENDS_SENTENCE = {"Dr", "Mr", "Mrs", "Ms", "Prof", "vs", "approx"}
 PHRASES = {
     "e.g.": "for example", "i.e.": "that is",
     "a.m.": "AM", "p.m.": "PM",
@@ -215,8 +221,11 @@ def normalize(text, spell_acronyms=False, strip_emoji=True):
     # whose hyphen is preceded by a digit and so is unaffected.
     t = re.sub(r"(?<![\w\d])-\s?(?=\d)", "negative ", t)
 
-    t = re.sub(r"\b(\d+)/(\d+)\b",
-               lambda m: _say_fraction(int(m.group(1)), int(m.group(2))), t)
+    # The unit is absorbed here: once the fraction becomes words, the unit rule
+    # below can no longer see a quantity in front of it ("3/4 kg").
+    t = re.sub(r"\b(\d+)/(\d+)(?:\s?(" + "|".join(UNITS) + r")\b)?",
+               lambda m: _say_fraction(int(m.group(1)), int(m.group(2)))
+               + (" " + UNITS[m.group(3)] if m.group(3) else ""), t)
 
     sym = "|".join(re.escape(s) for s in CURRENCIES)
     t = re.sub("(" + sym + r")\s?(\d[\d,]*)(?:\.(\d{1,2}))?",
@@ -229,7 +238,12 @@ def normalize(text, spell_acronyms=False, strip_emoji=True):
                lambda m: _say_number(m.group(1)) + " " + UNITS[m.group(2)], t)
 
     for abbr, full in ABBREVIATIONS.items():
-        t = re.sub(r"\b" + re.escape(abbr) + r"\.", full, t)
+        esc = re.escape(abbr)
+        if abbr not in _NEVER_ENDS_SENTENCE:
+            # Ends a sentence when the text stops here or a capitalised word
+            # follows; the full stop has to be kept in that case.
+            t = re.sub(r"\b" + esc + r"\.(?=\s+[A-Z]|\s*$)", full + ".", t)
+        t = re.sub(r"\b" + esc + r"\.", full, t)
     for src, dst in PHRASES.items():
         t = t.replace(src, dst)
 

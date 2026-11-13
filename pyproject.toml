@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speakable"
-version = "1.0.0"
+version = "1.1.0"
 description = "Text normalization for voice agents - turn LLM output into text a TTS engine speaks correctly."
 readme = "README.md"
 requires-python = ">=3.9"

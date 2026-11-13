@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speakable - fix text your TTS engine reads wrong</title>
+<meta name="description" content="Your voice agent says &quot;asterisk asterisk&quot;. Paste LLM output and see what your TTS engine should say instead. Strips markdown and emoji; speaks currency, dates, times, phone numbers and abbreviations properly. Free, runs in your browser.">
+<meta property="og:title" content="Why your voice agent says &quot;asterisk asterisk&quot;">
+<meta property="og:description" content="Paste LLM output, see what your TTS engine should actually say. Free and runs entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'&gt;&lt;rect width='32' height='32' rx='7' fill='%230b0f17'/&gt;&lt;text x='16' y='23' font-size='20' text-anchor='middle' fill='%2358a6ff' font-family='sans-serif'&gt;S&lt;/text&gt;&lt;/svg&gt;">
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#111722; --line:#1e2735;
+    --fg:#f0f6fc; --muted:#7d8999;
+    --blue:#58a6ff; --green:#7ee787; --red:#ff7b72;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:40px 20px 80px}
+  header{border-left:4px solid var(--blue); padding-left:18px; margin-bottom:34px}
+  h1{font-size:30px; line-height:1.25; margin:0 0 10px}
+  h1 .q{color:var(--blue)}
+  .sub{color:var(--muted); margin:0; max-width:620px}
+  .demo{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+        padding:18px; margin-bottom:12px}
+  .row{display:flex; gap:10px; align-items:baseline; margin-bottom:10px; flex-wrap:wrap}
+  label{font-size:13px; color:var(--muted); text-transform:uppercase;
+        letter-spacing:.06em; font-weight:600}
+  textarea{
+    width:100%; min-height:120px; resize:vertical; background:#0d1220;
+    color:var(--fg); border:1px solid var(--line); border-radius:8px;
+    padding:12px; font:14px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;
+  }
+  textarea:focus{outline:none; border-color:var(--blue)}
+  .out{
+    background:#0d1220; border:1px solid var(--line); border-left:3px solid var(--green);
+    border-radius:8px; padding:12px; min-height:120px; white-space:pre-wrap;
+    font:14px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--green);
+  }
+  .out.empty{color:var(--muted); border-left-color:var(--line)}
+  .bar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:14px 0 4px}
+  button{
+    background:#1b2433; color:var(--fg); border:1px solid var(--line);
+    border-radius:6px; padding:7px 12px; font-size:13px; cursor:pointer;
+  }
+  button:hover{border-color:var(--blue); color:var(--blue)}
+  button.primary{background:var(--blue); color:#06101f; border-color:var(--blue);
+                 font-weight:600}
+  button.primary:hover{opacity:.9; color:#06101f}
+  .opts{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:13px;
+        color:var(--muted)}
+  .opts label{text-transform:none; letter-spacing:0; font-weight:400; cursor:pointer}
+  .stat{font-size:12px; color:var(--muted); margin-top:8px}
+  h2{font-size:19px; margin:40px 0 12px; padding-top:28px; border-top:1px solid var(--line)}
+  table{width:100%; border-collapse:collapse; font-size:14px}
+  th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
+  code{background:#0d1220; border:1px solid var(--line); border-radius:4px;
+       padding:1px 5px; font:13px ui-monospace,Consolas,monospace; color:var(--blue)}
+  pre{background:#0d1220; border:1px solid var(--line); border-radius:8px;
+      padding:14px; overflow-x:auto; font:13px/1.6 ui-monospace,Consolas,monospace}
+  pre code{background:none; border:none; padding:0; color:var(--fg)}
+  .bad{color:var(--red)} .good{color:var(--green)}
+  a{color:var(--blue)}
+  footer{margin-top:50px; padding-top:20px; border-top:1px solid var(--line);
+         color:var(--muted); font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Why your voice agent says <span class="q">&ldquo;asterisk asterisk&rdquo;</span></h1>
+  <p class="sub">Your LLM returns markdown, currency and dates. Your TTS engine
+  reads them literally and your caller hears gibberish. Paste anything below and
+  see what it should say instead.</p>
+</header>
+
+<div class="demo">
+  <div class="row"><label>What your LLM returns</label></div>
+  <textarea id="in" spellcheck="false"></textarea>
+
+  <div class="bar">
+    <button data-ex="**Invoice #42**: $1,234.56 due 2026-11-11. Call Dr. Rao at (555) 123-4567 before 3:30 PM.">Invoice</button>
+    <button data-ex="Your appointment is on March 3rd, 2027 at 14:00. The clinic is at 42 Oak St. Co-pay is &#8377;1,500, about 15% of the total.">Appointment</button>
+    <button data-ex="### Order summary &#127881;\n- 3/4 kg of coffee &#8212; **&#8364;12.50**\n- 2 lbs of beans\n- Ships in 2-3 days\n\nTracking: v1.2.3 &#183; support@shop.com &#183; server 192.168.1.1">Markdown mess</button>
+    <button data-ex="Temperature dropped to -5 degrees. We saw a 20-30% decline. Call +91 98765 43210 or visit https://example.com/help for the 1st time setup.">Edge cases</button>
+  </div>
+
+  <div class="opts">
+    <label><input type="checkbox" id="emoji" checked> strip emoji</label>
+    <label><input type="checkbox" id="acr"> spell acronyms (API &rarr; A P I)</label>
+  </div>
+</div>
+
+<div class="demo">
+  <div class="row">
+    <label>What your TTS engine should say</label>
+    <button id="copy" style="margin-left:auto">Copy</button>
+  </div>
+  <div id="out" class="out empty">Output appears here as you type.</div>
+  <div class="stat" id="stat"></div>
+</div>
+
+<h2>What it fixes</h2>
+<table>
+  <tr><th>Input</th><th>Spoken as</th></tr>
+  <tr><td><code>**bold**</code> <code>### head</code> <code>[a](b)</code></td><td>markdown stripped, never read aloud</td></tr>
+  <tr><td><code>$1,234.56</code></td><td>one thousand two hundred thirty-four dollars and fifty-six cents</td></tr>
+  <tr><td><code>2026-11-11</code></td><td>November eleventh, twenty twenty-six</td></tr>
+  <tr><td><code>14:00</code></td><td>two o'clock PM &mdash; not &ldquo;fourteen o'clock&rdquo;</td></tr>
+  <tr><td><code>(555) 123-4567</code></td><td>digit by digit, like a human reads a number</td></tr>
+  <tr><td><code>3/4</code> &middot; <code>-5</code> &middot; <code>20-30</code></td><td>three quarters &middot; negative five &middot; twenty to thirty</td></tr>
+  <tr><td><code>Dr.</code> <code>approx.</code> <code>e.g.</code></td><td>Doctor &middot; approximately &middot; for example</td></tr>
+  <tr><td><code>192.168.1.1</code> &middot; <code>v1.2.3</code></td><td>read as an address and a version, not a phone number</td></tr>
+</table>
+
+<h2>Use it in your own code</h2>
+<p>Same engine as this page, as a Python package. Zero dependencies, MIT.</p>
+<pre><code>pip install speakable
+
+<span style="color:#7d8999"># in your agent, right before the TTS call</span>
+from speakable import normalize
+await tts.say(normalize(llm_output))</code></pre>
+<p class="stat">This page runs the whole thing client-side. Nothing you paste
+leaves your browser &mdash; there is no server to send it to.</p>
+
+<footer>
+  <a href="https://pypi.org/project/speakable/">PyPI</a> &middot;
+  <a href="https://github.com/Divyajeet01/speakable">Source on GitHub</a> &middot;
+  MIT licensed &middot; built for voice agents
+</footer>
+
+</div>
+
+<script>
+/* ---- numbers ---- */
+const ONES=["zero","one","two","three","four","five","six","seven","eight","nine",
+"ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen",
+"eighteen","nineteen"];
+const TENS=["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+const SCALES=[[1e12,"trillion"],[1e9,"billion"],[1e6,"million"],[1e3,"thousand"]];
+const ORD={one:"first",two:"second",three:"third",four:"fourth",five:"fifth",
+six:"sixth",seven:"seventh",eight:"eighth",nine:"ninth",ten:"tenth",
+eleven:"eleventh",twelve:"twelfth",thirteen:"thirteenth",fourteen:"fourteenth",
+fifteen:"fifteenth",sixteen:"sixteenth",seventeen:"seventeenth",
+eighteen:"eighteenth",nineteen:"nineteenth",twenty:"twentieth",thirty:"thirtieth",
+forty:"fortieth",fifty:"fiftieth",sixty:"sixtieth",seventy:"seventieth",
+eighty:"eightieth",ninety:"ninetieth",hundred:"hundredth",thousand:"thousandth",
+million:"millionth",billion:"billionth",zero:"zeroth"};
+const MONTHS=["January","February","March","April","May","June","July","August",
+"September","October","November","December"];
+
+function underHundred(n){
+  if(n<20) return ONES[n];
+  const t=Math.floor(n/10), o=n%10;
+  return TENS[t]+(o?"-"+ONES[o]:"");
+}
+function underThousand(n){
+  const h=Math.floor(n/100), r=n%100, p=[];
+  if(h) p.push(ONES[h],"hundred");
+  if(r) p.push(underHundred(r));
+  return p.join(" ");
+}
+function intToWords(n){
+  if(n<0) return "negative "+intToWords(-n);
+  if(n===0) return "zero";
+  const p=[];
+  for(const [v,name] of SCALES){
+    if(n>=v){ p.push(intToWords(Math.floor(n/v)), name); n=n%v; }
+  }
+  if(n) p.push(underThousand(n));
+  return p.join(" ");
+}
+function digitsToWords(s){
+  const out=[];
+  for(const ch of s){
+    if(ch>="0"&&ch<="9") out.push(ONES[+ch]);
+    else if(ch==="+") out.push("plus");
+    else if("-.()".includes(ch)) continue;
+    else out.push(ch);
+  }
+  return out.join(" ");
+}
+function decimalToWords(whole,frac){
+  return (whole?intToWords(parseInt(whole,10)):"zero")+" point "+digitsToWords(frac);
+}
+function ordinalToWords(n){
+  const w=intToWords(n);
+  let i=w.lastIndexOf("-"), sep="-";
+  if(i<0){ i=w.lastIndexOf(" "); sep=" "; }
+  const head=i<0?"":w.slice(0,i), last=i<0?w:w.slice(i+1);
+  if(ORD[last]) return (i<0?"":head+sep)+ORD[last];
+  return w+"th";
+}
+function yearToWords(y){
+  if((y>=1100&&y<2000)||(y>=2010&&y<2100)){
+    const hi=Math.floor(y/100), lo=y%100;
+    if(lo===0) return intToWords(hi)+" hundred";
+    if(lo<10) return intToWords(hi)+" oh "+ONES[lo];
+    return intToWords(hi)+" "+underHundred(lo);
+  }
+  return intToWords(y);
+}
+
+/* ---- normalize ---- */
+const CUR={"$":["dollar","cent"],"\u20b9":["rupee","paisa"],"\u00a3":["pound","penny"],
+"\u20ac":["euro","cent"],"\u00a5":["yen","sen"]};
+const ABBR={Dr:"Doctor",Mr:"Mister",Mrs:"Missus",Ms:"Miss",Prof:"Professor",
+Jr:"Junior",Sr:"Senior",St:"Street",Ave:"Avenue",Rd:"Road",Blvd:"Boulevard",
+Ln:"Lane",Apt:"Apartment",Ste:"Suite",Inc:"Incorporated",Corp:"Corporation",
+Ltd:"Limited",Dept:"Department",approx:"approximately",vs:"versus",etc:"et cetera"};
+// Abbreviations that sit *before* a name ("Dr. Rao") or join two clauses
+// ("Acme vs. Beta") can never end a sentence, so their full stop always
+// belongs to the abbreviation. The rest sit *after* their noun ("42 Oak St.")
+// and can end a sentence - there the full stop has to survive.
+const NEVER_ENDS_SENTENCE=new Set(["Dr","Mr","Mrs","Ms","Prof","vs","approx"]);
+const PHRASES=[["e.g.","for example"],["i.e.","that is"],["a.m.","AM"],["p.m.","PM"],
+["&"," and "],["%"," percent "],["="," equals "],["<"," less than "],[">"," greater than "]];
+const UNITS={kg:"kilograms",mg:"milligrams",lbs:"pounds",lb:"pounds",oz:"ounces",
+km:"kilometers",cm:"centimeters",mm:"millimeters",mi:"miles",ft:"feet",hrs:"hours",
+hr:"hours",sec:"seconds",ms:"milliseconds",kb:"kilobytes",mb:"megabytes",
+gb:"gigabytes",tb:"terabytes"};
+const PRONOUNCEABLE=new Set(["NASA","RADAR","LASER","SCUBA","JSON","YAML","SOAP",
+"REST","SIP","RAM","ROM","AIDS","OPEC","NATO","SIM"]);
+const EMOJI=/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}\u{FE00}-\u{FE0F}\u{2B00}-\u{2BFF}]+/gu;
+
+const FRACTIONS={"1/2":"one half","1/3":"one third","2/3":"two thirds",
+"1/4":"one quarter","3/4":"three quarters","1/5":"one fifth","1/8":"one eighth",
+"3/8":"three eighths","5/8":"five eighths"};
+
+function sayNumber(raw){
+  raw=raw.replace(/,/g,"");
+  if(raw.includes(".")){
+    const i=raw.indexOf(".");
+    return decimalToWords(raw.slice(0,i), raw.slice(i+1));
+  }
+  return intToWords(parseInt(raw,10));
+}
+function sayFraction(n,d){
+  const k=n+"/"+d;
+  return FRACTIONS[k] || (intToWords(n)+" over "+intToWords(d));
+}
+function sayMoney(sym,whole,frac){
+  const [major,minor]=CUR[sym];
+  const amt=parseInt(whole.replace(/,/g,""),10);
+  let out=intToWords(amt)+" "+major+(amt===1?"":"s");
+  if(frac && parseInt(frac,10)){
+    const cents=parseInt(frac.padEnd(2,"0").slice(0,2),10);
+    let word;
+    if(minor==="penny") word = cents===1?"penny":"pence";
+    else if(minor==="paisa") word = cents===1?"paisa":"paise";
+    else word = cents===1?minor:minor+"s";
+    out+=" and "+intToWords(cents)+" "+word;
+  }
+  return out;
+}
+function sayDate(y,m,d){
+  if(!(m>=1&&m<=12&&d>=1&&d<=31)) return "";
+  return MONTHS[m-1]+" "+ordinalToWords(d)+", "+yearToWords(y);
+}
+function sayTime(h,mi,meridiem){
+  if(h>23||mi>59) return "";
+  if(!meridiem && h>=13){ h-=12; meridiem="PM"; }
+  else if(!meridiem && h===0){ h=12; meridiem="AM"; }
+  const hour=intToWords(h?h:12);
+  let body;
+  if(mi===0) body=hour+" o'clock";
+  else if(mi<10) body=hour+" oh "+intToWords(mi);
+  else body=hour+" "+intToWords(mi);
+  return (body+" "+meridiem.toUpperCase().replace(/\./g,"")).trim();
+}
+function monthName(tok){
+  for(const n of MONTHS) if(n.toLowerCase().startsWith(tok.slice(0,3).toLowerCase())) return n;
+  return tok;
+}
+function stripMarkdown(t){
+  t=t.replace(/```[\s\S]*?```/g," ");
+  t=t.replace(/`([^`]*)`/g,"$1");
+  t=t.replace(/!\[[^\]]*\]\([^)]*\)/g," ");
+  t=t.replace(/\[([^\]]+)\]\([^)]*\)/g,"$1");
+  t=t.replace(/^\s{0,3}#{1,6}\s*/gm,"");
+  t=t.replace(/^\s{0,3}>\s?/gm,"");
+  t=t.replace(/^\s*[-*+]\s+/gm,"");
+  t=t.replace(/^\s*\|.*\|\s*$/gm," ");
+  t=t.replace(/^\s*[-*_]{3,}\s*$/gm," ");
+  t=t.replace(/(\*\*\*|___)([\s\S]+?)\1/g,"$2");
+  t=t.replace(/(\*\*|__)([\s\S]+?)\1/g,"$2");
+  t=t.replace(/(?<!\w)([*_])(?!\s)(.+?)(?<!\s)\1(?!\w)/g,"$2");
+  t=t.replace(/~~(.+?)~~/g,"$1");
+  // Streaming LLM output leaves unpaired markers; any survivor would be spoken.
+  t=t.replace(/\*+/g,"");
+  return t;
+}
+
+function normalize(text,spellAcronyms,stripEmoji){
+  if(!text) return "";
+  let t=stripMarkdown(text);
+  if(stripEmoji) t=t.replace(EMOJI," ");
+
+  // Emails and URLs first, before anything else touches the dots.
+  t=t.replace(/\b[\w.+-]+@[\w-]+\.[\w.]+\b/g,
+      m=>m.replace(/@/g," at ").replace(/\./g," dot "));
+  t=t.replace(/https?:\/\/\S+|\bwww\.\S+/g,
+      m=>m.replace(/https?:\/\/|www\./g,"").replace(/\/\S*$/,"").replace(/\./g," dot "));
+
+  // Dotted numerics before anything numeric, or the phone matcher claims them.
+  t=t.replace(/\b(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\b/g,
+      (m,a,b,c,d)=>[a,b,c,d].map(g=>intToWords(+g)).join(" dot "));
+  t=t.replace(/\bv?(\d+)\.(\d+)\.(\d+)\b/g,
+      (m,a,b,c)=>[a,b,c].map(g=>intToWords(+g)).join(" point "));
+
+  // Dates before phone numbers: 2026-11-11 is digits-and-hyphens too.
+  t=t.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,
+      (m,y,mo,d)=>sayDate(+y,+mo,+d)||m);
+  t=t.replace(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g,
+      (m,mo,d,y)=>sayDate(+y,+mo,+d)||m);
+  const monthRe=MONTHS.concat(MONTHS.map(m=>m.slice(0,3))).join("|");
+  t=t.replace(new RegExp("\\b("+monthRe+")\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s*(\\d{4}))?\\b","gi"),
+      (m,mo,d,y)=>monthName(mo)+" "+ordinalToWords(+d)+(y?", "+yearToWords(+y):""));
+
+  // The meridiem deliberately does not absorb a trailing dot, so "3:30 PM."
+  // keeps its sentence-ending period.
+  t=t.replace(/\b(\d{1,2}):(\d{2})(?:\s*([ap]\.?m))?/gi,
+      (m,h,mi,mer)=>sayTime(+h,+mi,mer||"")||m);
+
+  t=t.replace(/(?<![\w$.])\+?\(?\d[\d\-.\s()]{6,18}\d\)?(?![\w])/g, m=>{
+    const raw=m.trim(), digits=raw.replace(/\D/g,"");
+    if(digits.length<7||digits.length>15) return m;
+    const seps=(raw.match(/[\s\-.]/g)||[]).length;
+    if(!(raw.startsWith("+")||raw.includes("(")||seps>=2||
+         (seps===0&&digits.length>=10))) return m;
+    return digitsToWords(raw);
+  });
+
+  t=t.replace(/#(?=\d)/g,"number ");
+
+  t=t.replace(/\b(\d[\d,]*)\s?-\s?(\d[\d,]*)\b/g,
+      (m,a,b)=>sayNumber(a)+" to "+sayNumber(b));
+  t=t.replace(/(?<![\w\d])-\s?(?=\d)/g,"negative ");
+
+  // The unit is absorbed here: once the fraction becomes words, the unit rule
+  // below can no longer see a quantity in front of it ("3/4 kg").
+  t=t.replace(new RegExp("\\b(\\d+)\\/(\\d+)(?:\\s?("+Object.keys(UNITS).join("|")+")\\b)?","g"),
+      (m,a,b,u)=>sayFraction(+a,+b)+(u?" "+UNITS[u]:""));
+
+  const sym=Object.keys(CUR).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|");
+  t=t.replace(new RegExp("("+sym+")\\s?(\\d[\\d,]*)(?:\\.(\\d{1,2}))?","g"),
+      (m,s,w,f)=>sayMoney(s,w,f));
+  t=t.replace(/(\d[\d,]*(?:\.\d+)?)\s?%/g,(m,n)=>sayNumber(n)+" percent");
+  t=t.replace(/\b(\d+)(?:st|nd|rd|th)\b/g,(m,n)=>ordinalToWords(+n));
+  t=t.replace(new RegExp("\\b(\\d[\\d,]*(?:\\.\\d+)?)\\s?("+Object.keys(UNITS).join("|")+")\\b","g"),
+      (m,n,u)=>sayNumber(n)+" "+UNITS[u]);
+
+  for(const [a,full] of Object.entries(ABBR)){
+    // Every key is plain letters, so no regex escaping is needed here.
+    if(!NEVER_ENDS_SENTENCE.has(a))
+      t=t.replace(new RegExp("\\b"+a+"\\.(?=\\s+[A-Z]|\\s*$)","g"),full+".");
+    t=t.replace(new RegExp("\\b"+a+"\\.","g"),full);
+  }
+  for(const [src,dst] of PHRASES) t=t.split(src).join(dst);
+
+  t=t.replace(/\b\d[\d,]*(?:\.\d+)?\b/g,m=>sayNumber(m));
+
+  if(spellAcronyms)
+    t=t.replace(/\b([A-Z]{2,5})\b/g,m=>PRONOUNCEABLE.has(m)?m:m.split("").join(" "));
+
+  t=t.replace(/#/g," ");                  // a bare hash would be read "hash"
+  t=t.replace(/[ \t]+/g," ");
+  t=t.replace(/\s+([,.!?;:])/g,"$1");
+  return t.replace(/\n{2,}/g,"\n").trim();
+}
+
+/* ---- page ---- */
+const $in=document.getElementById("in"), $out=document.getElementById("out"),
+      $stat=document.getElementById("stat"), $emoji=document.getElementById("emoji"),
+      $acr=document.getElementById("acr");
+
+function run(){
+  const src=$in.value;
+  if(!src.trim()){
+    $out.textContent="Output appears here as you type.";
+    $out.classList.add("empty"); $stat.textContent=""; return;
+  }
+  const t0=performance.now();
+  const out=normalize(src,$acr.checked,$emoji.checked);
+  const ms=performance.now()-t0;
+  $out.textContent=out; $out.classList.remove("empty");
+  $stat.textContent=src.length+" chars in \u2192 "+out.length+" out \u00b7 "+ms.toFixed(2)+" ms";
+}
+$in.addEventListener("input",run);
+$emoji.addEventListener("change",run);
+$acr.addEventListener("change",run);
+document.querySelectorAll("button[data-ex]").forEach(b=>{
+  b.addEventListener("click",()=>{
+    $in.value=b.dataset.ex.replace(/\\n/g,"\n"); run(); $in.focus();
+  });
+});
+document.getElementById("copy").addEventListener("click",async e=>{
+  if($out.classList.contains("empty")) return;
+  await navigator.clipboard.writeText($out.textContent);
+  const b=e.target; b.textContent="Copied"; setTimeout(()=>b.textContent="Copy",1200);
+});
+$in.value="**Invoice #42**: $1,234.56 due 2026-11-11. Call Dr. Rao at (555) 123-4567 before 3:30 PM.";
+run();
+</script>
+</body>
+</html>
