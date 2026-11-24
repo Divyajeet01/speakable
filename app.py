@@ -5,6 +5,7 @@ Docs:         http://127.0.0.1:8000/docs
 """
 import os
 import time
+from typing import List
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +41,7 @@ class NormalizeRequest(BaseModel):
 
 
 class BatchRequest(BaseModel):
-    texts: list[str] = Field(..., examples=[["Call $5", "Due 2026-01-05"]])
+    texts: List[str] = Field(..., examples=[["Call $5", "Due 2026-01-05"]])
     spell_acronyms: bool = False
     strip_emoji: bool = True
 
