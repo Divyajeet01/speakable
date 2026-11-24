@@ -3,10 +3,16 @@
 `index.html` is the whole product. One file, no build step, no dependencies, no
 server. Open it locally and it works offline.
 
-**Verified before shipping:** the JavaScript engine was diffed against the
-Python library on all 28 test cases plus the 2 acronym cases - **30/30 identical
-output**. The page is not an approximation of `speakable`; it is the same
-behaviour.
+**Verified on every push:** `tests/test_parity.py` lifts the JavaScript engine
+straight out of this page, runs it over all 91 suite cases plus the acronym and
+emoji options, and diffs the output against the Python library - **94/94
+identical**. CI fails if they drift. The page is not an approximation of
+`speakable`; it is the same behaviour, and that is now checked rather than
+claimed.
+
+```bash
+python tests/test_parity.py     # needs node; skips without it
+```
 
 ## Deploy free on GitHub Pages
 
@@ -46,6 +52,11 @@ The funnel: page &rarr; `pip install` &rarr; (later) the paid API in
 
 ## Changelog
 
+**1.2.0** - twelve bugs fixed and the coverage gaps beside them, all mirrored
+here. The full list is in the README. The item left open below is one of them:
+`"1 kg"` now reads as `"one kilogram"`. Keeping the two engines in step is no
+longer a manual diff - `tests/test_parity.py` does it, and CI runs it.
+
 **1.1.0** - two bugs found while building this page, both fixed in the library
 and mirrored here:
 
@@ -62,3 +73,5 @@ One existing test expectation was itself encoding bug 1 and was corrected:
 **Still open, deliberately not changed:** units are always plural, so `"1 kg"`
 reads as `"one kilograms"`. Fixing it touches the same rule but changes more
 behaviour than the two bugs above, so it is left for you to decide on.
+*(Decided in 1.2.0: a quantity of exactly one now takes a singular unit. A
+fraction still takes a plural one.)*

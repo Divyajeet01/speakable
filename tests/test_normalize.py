@@ -62,6 +62,99 @@ CASES = [
     # A non-unit word after a fraction is left alone.
     ("Add 3/4 cup", "Add three quarters cup"),
     ("", ""),
+
+    # --- 1.2.0 ---
+    # A quantity of exactly one takes a singular unit.
+    ("The box weighs 1 kg.", "The box weighs one kilogram."),
+    ("It took 1 hr and 2 hrs.", "It took one hour and two hours."),
+    ("1 ft and 2 ft long.", "one foot and two feet long."),
+    ("1 mph wind.", "one mile per hour wind."),
+    # ...but a fraction of one does not.
+    ("Add 1/2 tsp salt.", "Add one half teaspoons salt."),
+    # A magnitude suffix belongs to the amount, not to the next word.
+    ("Revenue hit $1.5M last year.",
+     "Revenue hit one point five million dollars last year."),
+    ("A $2B round closed.", "A two billion dollars round closed."),
+    ("Budget is $5M-$10M range.",
+     "Budget is five million dollars to ten million dollars range."),
+    # Under a unit, only the minor part is spoken.
+    ("Just $.50 more.", "Just fifty cents more."),
+    ("Cost: $0.99 only.", "Cost: ninety-nine cents only."),
+    ("He owes $1.", "He owes one dollar."),
+    # An ISO code reads as the currency it names.
+    ("Pay USD 50 or EUR 40.", "Pay fifty US dollars or forty euros."),
+    ("USD 1 only.", "one US dollar only."),
+    # A percent on both ends of a hyphen is a range, not a negative number.
+    ("Save 10%-20% today.", "Save ten percent to twenty percent today."),
+    ("Discount is -5% this week.",
+     "Discount is negative five percent this week."),
+    # A slash: an idiom, a date, a fraction, or a score out of a total.
+    ("We are open 24/7 for support.",
+     "We are open twenty four seven for support."),
+    ("Delivery on 12/25 confirmed.",
+     "Delivery on December twenty-fifth confirmed."),
+    ("On 11/11 we launch.", "On November eleventh we launch."),
+    ("Rated 4.5/5 overall.", "Rated four point five out of five overall."),
+    ("Use a 5/8 inch bolt.", "Use a five eighths inch bolt."),
+    # A colon pair the clock rule rejected is a ratio or a score.
+    ("The ratio is 3:1 overall.", "The ratio is three to one overall."),
+    ("Score was 2:0 at halftime.", "Score was two to zero at halftime."),
+    ("Meet at 10:30 tomorrow.", "Meet at ten thirty tomorrow."),
+    # The classic seven-digit local number, and an extension.
+    ("Call 555-0100 now.", "Call five five five zero one zero zero now."),
+    ("Call 555-0100 x204 now.",
+     "Call five five five zero one zero zero extension two zero four now."),
+    ("Call ext. 204 please.", "Call extension two zero four please."),
+    # A spaced "x" is a multiplication sign, not an extension.
+    ("Vitamin B12 x 3 daily.", "Vitamin B12 x three daily."),
+    # A leading zero marks an identifier, which is read out digit by digit.
+    ("Your PIN is 0042.", "Your PIN is zero zero four two."),
+    ("Order 00123 shipped.", "Order zero zero one two three shipped."),
+    ("Room 101 is ready.", "Room one hundred one is ready."),
+    # An abbreviation capitalised at the start of a sentence still expands.
+    ("Approx. 40 people came.", "Approximately forty people came."),
+    ("No. 7 is missing.", "number seven is missing."),
+    # Temperatures.
+    ("It is 20°C today.", "It is twenty degrees Celsius today."),
+    ("It is 72°F today.", "It is seventy-two degrees Fahrenheit today."),
+    ("Turn 90° left.", "Turn ninety degrees left."),
+    ("Set the oven to 350 degrees F.",
+     "Set the oven to three hundred fifty degrees Fahrenheit."),
+    # A pair of years is spoken as years, not counted.
+    ("The 2026-2027 season starts.",
+     "The twenty twenty-six to twenty twenty-seven season starts."),
+    ("The 1990-1995 period was odd.",
+     "The nineteen ninety to nineteen ninety-five period was odd."),
+    # ...but a pair of plain numbers is still a range.
+    ("Lines 1,000-2,000 failed.",
+     "Lines one thousand to two thousand failed."),
+    ("ETA is 10 min.", "ETA is ten minutes."),
+    ("Latency was 250 ms flat.", "Latency was two hundred fifty "
+     "milliseconds flat."),
+    # A multiplier and a size.
+    ("A 3x increase happened.", "A three times increase happened."),
+    ("A 2x4 board.", "A two by four board."),
+    # A dotted initialism is spelled out, so TTS does not say the word "us".
+    # The full stop survives only at the end of a line - "U.S. Department" is
+    # one phrase, not two sentences.
+    ("The U.S. Department opened.", "The U S Department opened."),
+    ("We ship to the U.K.", "We ship to the U K."),
+    ("Ph.D. candidates only.", "P H D candidates only."),
+    # A weekday abbreviation, which can end a sentence.
+    ("Mon. is a holiday.", "Monday is a holiday."),
+    ("Sat. delivery is extra.", "Saturday delivery is extra."),
+    # Typography an LLM emits that TTS skips or mispronounces.
+    ("Wait — I think so.", "Wait, I think so."),
+    ("Takes 20–30 minutes.", "Takes twenty to thirty minutes."),
+    ("She said ‘ok’ then left.", "She said 'ok' then left."),
+    ("Bullet • point here.", "Bullet point here."),
+    # A bare domain, with its path dropped as a URL's is.
+    ("Visit example.com/docs today.", "Visit example dot com today."),
+    # ...but an ordinary full stop before a capital is not a domain, and a
+    # suffix that is not a TLD is left alone.
+    ("I will check the data. Org policy says no.",
+     "I will check the data. Org policy says no."),
+    ("The file app.js is broken.", "The file app.js is broken."),
 ]
 
 
@@ -85,8 +178,23 @@ def test_acronyms():
 
 
 def test_idempotent():
-    once = normalize("Pay $20 by 2026-01-05.")
-    assert normalize(once) == once
+    """Normalized text is already spoken form, so a second pass is a no-op.
+
+    Agents re-run this on text that has been through it before; a rule that
+    keeps firing would garble the output a little more on every pass.
+    """
+    unstable = []
+    for src, _ in CASES:
+        once = normalize(src)
+        if normalize(once) != once:
+            unstable.append((src, once, normalize(once)))
+    for src, once, twice in unstable:
+        print("INPUT: %r" % src)
+        print("ONCE:  %r" % once)
+        print("TWICE: %r" % twice)
+        print()
+    assert not unstable, "%d/%d outputs changed on a second pass" % (
+        len(unstable), len(CASES))
 
 
 if __name__ == "__main__":

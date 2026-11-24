@@ -1,0 +1,41 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    # 3.9 is the floor pyproject.toml claims, so it is the floor that is tested.
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Normalizer suite
+        run: python tests/test_normalize.py
+      # The browser engine in docs/index.html is a hand-written port of the
+      # library; this fails the build if the two have drifted apart.
+      - name: Browser-engine parity
+        run: python tests/test_parity.py
+      - name: Package imports with no dependencies installed
+        run: python -c "import speakable; print(speakable.__version__)"
+
+  api:
+    # The HTTP wrapper is optional, so it gets its own job with the extras.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - run: pip install -r requirements.txt
+      - name: App imports and serves on the oldest supported Python
+        run: python -c "import app; print(app.app.title, app.app.version)"

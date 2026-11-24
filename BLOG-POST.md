@@ -144,20 +144,25 @@ normalize("**Invoice #42**: $1,234.56 due 2026-11-11.")
 #  and fifty-six cents due November eleventh, twenty twenty-six.'
 ```
 
-In a LiveKit agent it's one line, right before synthesis:
+It's one line, wherever your pipeline hands text to the TTS engine:
 
 ```python
-await tts.say(normalize(llm_response))
+await speak(normalize(llm_response))
 ```
 
-It handles markdown and emoji stripping, currency in five denominations, dates
-in ISO/US/written forms, 12- and 24-hour times, phone numbers, percentages,
-ordinals, units, abbreviations, emails and URLs, and optional acronym spelling.
+Nothing about it is framework-specific — a string in, a string out, with no
+runtime dependencies, so it drops into any agent loop or streaming callback.
+
+It handles markdown and emoji stripping, currency in five denominations plus
+ISO codes, dates in ISO/US/written forms, 12- and 24-hour times, phone numbers
+and extensions, percentages and percent ranges, ordinals, fractions, ratios,
+temperatures, units in singular and plural, abbreviations and initialisms,
+emails and URLs, the typography LLMs emit, and optional acronym spelling.
 Zero dependencies in the core, around 1.5 ms per utterance, and idempotent —
 running it twice changes nothing.
 
-It does **not** yet handle non-English locales, Indian lakh/crore grouping,
-roman numerals, or fractions. If you need those, the issues are open.
+It does **not** yet handle non-English locales, lakh/crore wording, roman
+numerals, or vanity numbers. If you need those, the issues are open.
 
 MIT licensed. Source: `github.com/Divyajeet01/speakable`
 
