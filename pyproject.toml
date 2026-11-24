@@ -29,7 +29,7 @@ api = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "pydantic>=2.0"]
 Homepage = "https://github.com/Divyajeet01/speakable"
 "Try it in your browser" = "https://divyajeet01.github.io/speakable/"
 Issues = "https://github.com/Divyajeet01/speakable/issues"
-Changelog = "https://github.com/Divyajeet01/speakable#changelog"
+Changelog = "https://github.com/Divyajeet01/speakable/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["speakable"]

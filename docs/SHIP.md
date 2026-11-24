@@ -53,7 +53,7 @@ The funnel: page &rarr; `pip install` &rarr; (later) the paid API in
 ## Changelog
 
 **1.2.0** - twelve bugs fixed and the coverage gaps beside them, all mirrored
-here. The full list is in the README. The item left open below is one of them:
+here. The full list is in CHANGELOG.md. The item left open below is one of them:
 `"1 kg"` now reads as `"one kilogram"`. Keeping the two engines in step is no
 longer a manual diff - `tests/test_parity.py` does it, and CI runs it.
 
